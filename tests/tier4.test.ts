@@ -20,6 +20,13 @@ vi.mock("@huggingface/inference", () => {
   };
 });
 
+// Mock cross-fetch which InferenceEndpointManager uses internally
+const mockFetch = vi.fn();
+vi.mock("cross-fetch", () => ({
+  default: (...args: unknown[]) => mockFetch(...args),
+  __esModule: true
+}));
+
 describe("Tier 4: Next-Gen Modality & Deployments", () => {
   describe("HuggingFaceProvider", () => {
     it("should instantiate and format a chat complete request", async () => {
@@ -34,16 +41,16 @@ describe("Tier 4: Next-Gen Modality & Deployments", () => {
 
   describe("InferenceEndpointManager", () => {
     it("should fetch endpoint status correctly via REST", async () => {
-      // Mock global fetch
-      global.fetch = vi.fn().mockResolvedValue({
+      // Mock the cross-fetch response
+      mockFetch.mockResolvedValue({
         ok: true,
         json: async () => ({ status: { state: "running" } })
-      } as any);
+      });
 
       const manager = new InferenceEndpointManager("hf_token");
       const status = await manager.getEndpointStatus("my-org", "my-endpoint");
       expect(status).toBe("running");
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         "https://api.endpoints.huggingface.cloud/v2/endpoint/my-org/my-endpoint",
         expect.any(Object)
       );

@@ -137,6 +137,46 @@ const bot = new CustomerSupportBot({
 });
 ```
 
+#### 🧠 Honcho Memory — Semantic, Reasoning-Based Agent Memory
+Replace simple in-memory chat history with [Honcho's](https://honcho.dev) production-grade memory system. Your agents gain **cross-session context**, **semantic search**, **entity understanding**, and **continual learning** — all as a drop-in `BaseMemoryStore`.
+
+```typescript
+import { HonchoMemoryStore, AgentExecutor } from "echo-ai-sdk";
+
+// Drop-in replacement for InMemoryStore
+const memory = new HonchoMemoryStore({
+  apiKey: process.env.HONCHO_API_KEY,
+  workspaceId: "my-app",
+});
+
+const agent = new AgentExecutor({ gateway, memory, tools });
+
+// Agents now automatically persist and recall context across sessions!
+```
+
+**Semantic Search** — Find memories by meaning, not keywords:
+```typescript
+const results = await memory.searchMemory("user", "coding preferences", {
+  topK: 5,
+  maxDistance: 0.7,
+});
+// → Synthesized conclusions like "User prefers TypeScript with functional patterns"
+```
+
+**Peer Insights** — Ask Honcho what it knows about a user:
+```typescript
+const insight = await memory.getInsights("user", "What motivates this user?");
+// → "The user is motivated by building AI products that help people..."
+```
+
+**Unified Semantic Search** — Combine Honcho reasoning with local vector stores:
+```typescript
+import { SemanticMemorySearch, HonchoMemoryStore } from "echo-ai-sdk";
+
+const search = new SemanticMemorySearch(honchoStore, optionalVectorStore);
+const results = await search.search("user", "project architecture");
+```
+
 #### 📈 Outcome-Based Billing & ROI
 Track the *real value* of your AI by recording business outcomes.
 ```typescript
@@ -618,6 +658,8 @@ const voice = new EchoVoice({
 | `PromptTemplate` | Versioned prompt with mustache rendering |
 | `PromptRegistry` | Prompt version management with A/B rollback |
 | `InMemoryStore` | Session-based conversation memory |
+| `HonchoMemoryStore` | Production-grade Honcho-powered semantic memory store |
+| `SemanticMemorySearch` | Unified search across Honcho reasoning + local vectors |
 | `AgentTelemetry` | Lifecycle hooks interface for APM integration |
 
 ## License

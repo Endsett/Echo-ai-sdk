@@ -1,0 +1,47 @@
+# PR Labeler configuration
+# Labels PRs based on which paths are modified
+
+memory:
+  - changed-files:
+    - any-glob-to-any-file: 'src/memory/**'
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file: 'tests/**'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file: '.github/**'
+
+docs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '*.md'
+      - 'docs/**'
+
+build:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'tsconfig.json'
+      - 'vitest.config.ts'
+
+agents:
+  - changed-files:
+    - any-glob-to-any-file: 'src/agents/**'
+
+voice:
+  - changed-files:
+    - any-glob-to-any-file: 'src/voice/**'
+
+rag:
+  - changed-files:
+    - any-glob-to-any-file: 'src/rag/**'
+
+gateway:
+  - changed-files:
+    - any-glob-to-any-file: 'src/gateway/**'
+
+deployment:
+  - changed-files:
+    - any-glob-to-any-file: 'src/deployment/**'

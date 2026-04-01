@@ -5,6 +5,12 @@ export interface BaseMemoryStore {
   getMessages(sessionId: string): Promise<ChatMessage[]>;
   addMessage(sessionId: string, message: ChatMessage): Promise<void>;
   clearSession(sessionId: string): Promise<void>;
+
+  /** Optional: Semantic search across memory (implemented by HonchoMemoryStore). */
+  searchMemory?(peerId: string, query: string, opts?: any): Promise<any[]>;
+
+  /** Optional: Ask the memory system for synthesized insights about a peer. */
+  getInsights?(peerId: string, question: string): Promise<string>;
 }
 
 export class InMemoryStore implements BaseMemoryStore {
