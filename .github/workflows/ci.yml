@@ -6,13 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   lint:
-    name: Typecheck
+    name: Lint & Typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,10 +27,11 @@ jobs:
 
       - run: npm ci
 
+      - name: ESLint Check
+        run: npm run lint:js
+
       - name: TypeScript compilation check
-        run: npx tsc --noEmit || true
-        # Allow non-zero exit for pre-existing errors in non-memory modules.
-        # Once all modules are clean, change to strict: `run: npx tsc --noEmit`
+        run: npx tsc --noEmit
 
   test:
     name: Test (Node ${{ matrix.node-version }})
@@ -44,10 +48,6 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm ci
-      - run: npm run lint
-        name: Check Source Formatting (ESLint)
-      - run: npm run lint:types
-        name: Check TypeScript Compilability
       - run: npx vitest run --coverage
         name: Test & Enforce Coverage Baseline
       
