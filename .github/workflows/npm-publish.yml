@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: read
   id-token: write
@@ -71,6 +74,9 @@ jobs:
 
       - name: Build bundles
         run: npm run build
+
+      - name: Scope package for GPR
+        run: npm pkg set name="@Endsett/echo-ai-sdk-ts"
 
       - name: Publish to GitHub Packages
         uses: JS-DevTools/npm-publish@v3

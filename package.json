@@ -2,6 +2,10 @@
   "name": "echo-ai-sdk-ts",
   "version": "2.7.0",
   "description": "Echo AI SDK: Tier 5 Cloud Native (AWS Bedrock/SageMaker, GCP Vertex, Azure OpenAI/ML)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Endsett/Echo-ai-sdk.git"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
