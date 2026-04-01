@@ -15,6 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@honcho-ai/sdk": "^2.1.0",
     "@huggingface/inference": "^4.13.15",
     "cors": "^2.8.5",
     "cross-fetch": "^4.1.0",
