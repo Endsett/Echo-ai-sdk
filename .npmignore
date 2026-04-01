@@ -1,0 +1,13 @@
+# Tests
+tests/
+vitest.config.ts
+
+# Source (since we only ship dist)
+src/
+tsconfig.json
+tsup.config.ts
+
+# Misc
+.env
+.github/
+.vscode/

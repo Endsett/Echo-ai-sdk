@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Temp/log files
+*.txt
+*.log
+
+# Test artifacts
+vitest_report.json
+test_report.json
+
+# OS files
+.DS_Store
+Thumbs.db
