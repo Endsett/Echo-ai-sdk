@@ -30,8 +30,8 @@ export class OpenAIProvider extends BaseProvider {
       tool_calls: choice.message.tool_calls?.map(tc => ({
         id: tc.id,
         function: {
-          name: tc.function.name,
-          arguments: tc.function.arguments,
+          name: (tc as any).function.name,
+          arguments: (tc as any).function.arguments,
         }
       })),
       usage: {

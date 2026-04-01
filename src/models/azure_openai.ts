@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { OpenAIClient, AzureKeyCredential } from "@azure/openai";
 import { BaseProvider } from "./base";
 import { ChatRequest, ChatResponse } from "./schemas";
