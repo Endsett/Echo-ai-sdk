@@ -12,6 +12,9 @@ jobs:
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
+    # Dependency review requires the dependency graph to be enabled in repo settings.
+    # This prevents the workflow from failing if it's not yet configured.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
