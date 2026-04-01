@@ -1,5 +1,7 @@
 # Echo AI SDK
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/98d08a472ebc4504bd1e0adf0a8b4fb8)](https://app.codacy.com/gh/Endsett/Echo-ai-sdk?utm_source=github.com&utm_medium=referral&utm_content=Endsett/Echo-ai-sdk&utm_campaign=Badge_Grade)
+
 The all-in-one AI platform for chat, voice, agents, and **embeddable customer support chatbots**.
 
 ![npm](https://img.shields.io/npm/v/echo-ai-sdk) ![license](https://img.shields.io/npm/l/echo-ai-sdk) ![typescript](https://img.shields.io/badge/Language-TypeScript-blue)
