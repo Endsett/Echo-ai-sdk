@@ -116,22 +116,22 @@ export class HonchoMemoryStore implements BaseMemoryStore {
   private _sessions = new Map<string, Session>();
 
   constructor(options: HonchoMemoryConfig = {}) {
-    const apiKey = options.apiKey || process.env.HONCHO_API_KEY;
-    if (!apiKey) {
+    const apiKey = options.apiKey ?? process.env.HONCHO_API_KEY;
+    if (apiKey == null) {
       throw new ConfigurationError(
         "HonchoMemoryStore requires an API key. Provide `apiKey` in config or set HONCHO_API_KEY env var."
       );
     }
 
     const honchoConfig: HonchoConfig = {
-      apiKey,
-      workspaceId: options.workspaceId || process.env.HONCHO_WORKSPACE_ID || "default",
+      apiKey: apiKey,
+      workspaceId: (options.workspaceId ?? process.env.HONCHO_WORKSPACE_ID) || "default",
     };
 
     if (options.environment) {
       honchoConfig.environment = options.environment;
     }
-    if (options.baseUrl) {
+    if (options.baseUrl != null) {
       honchoConfig.baseURL = options.baseUrl;
     }
 

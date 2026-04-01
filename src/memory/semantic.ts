@@ -81,7 +81,7 @@ export class SemanticMemorySearch {
       }
     }
 
-    return Array.from(seen.values()).sort((a, b) => b.score - a.score);
+    return Array.from(seen.values()).sort(function(a, b) { return b.score - a.score });
   }
 
   /**
@@ -90,7 +90,7 @@ export class SemanticMemorySearch {
   async searchMessages(
     sessionId: string,
     query: string,
-    limit: number = 10
+    limit = 10
   ): Promise<MemorySearchResult[]> {
     if (!sessionId) throw new ValidationError("searchMessages", "sessionId is required.");
     if (!query) throw new ValidationError("searchMessages", "query is required.");
