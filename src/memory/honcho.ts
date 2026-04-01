@@ -1,4 +1,5 @@
-import { Honcho, type HonchoConfig, type Peer, type Session, type SessionContext, type Message as HonchoMessage } from "@honcho-ai/sdk";
+import { Honcho } from "@honcho-ai/sdk";
+import type { HonchoConfig, Peer, Session, SessionContext } from "@honcho-ai/sdk";
 import { ChatMessage } from "../models";
 import { ValidationError, ConfigurationError } from "../core/exceptions";
 import type { BaseMemoryStore } from "./store";
@@ -112,36 +113,45 @@ export class HonchoMemoryStore implements BaseMemoryStore {
   >;
 
   // Lazy-initialized caches
-  private _peers = new Map<string, Peer>();
-  private _sessions = new Map<string, Session>();
+  private _peers: Map<string, Peer> = new Map<string, Peer>();
+  private _sessions: Map<string, Session> = new Map<string, Session>();
 
   constructor(options: HonchoMemoryConfig = {}) {
-    const apiKey = options.apiKey ?? process.env.HONCHO_API_KEY;
-    if (apiKey == null) {
+    const resolvedKey: string | undefined = options.apiKey !== undefined
+      ? options.apiKey
+      : process.env.HONCHO_API_KEY;
+
+    if (typeof resolvedKey !== "string" || resolvedKey.length === 0) {
       throw new ConfigurationError(
         "HonchoMemoryStore requires an API key. Provide `apiKey` in config or set HONCHO_API_KEY env var."
       );
     }
 
+    const resolvedWorkspace: string = options.workspaceId !== undefined
+      ? options.workspaceId
+      : (process.env.HONCHO_WORKSPACE_ID !== undefined
+        ? process.env.HONCHO_WORKSPACE_ID
+        : "default");
+
     const honchoConfig: HonchoConfig = {
-      apiKey: apiKey,
-      workspaceId: (options.workspaceId ?? process.env.HONCHO_WORKSPACE_ID) || "default",
+      apiKey: resolvedKey,
+      workspaceId: resolvedWorkspace
     };
 
-    if (options.environment) {
+    if (options.environment !== undefined) {
       honchoConfig.environment = options.environment;
     }
-    if (options.baseUrl != null) {
+    if (options.baseUrl !== undefined) {
       honchoConfig.baseURL = options.baseUrl;
     }
 
     this.client = new Honcho(honchoConfig);
 
     this.config = {
-      maxTokens: options.maxTokens ?? 2000,
-      enableSummary: options.enableSummary ?? true,
-      assistantPeerId: options.assistantPeerId ?? "assistant",
-      userPeerId: options.userPeerId ?? "user",
+      maxTokens: options.maxTokens !== undefined ? options.maxTokens : 2000,
+      enableSummary: options.enableSummary !== undefined ? options.enableSummary : true,
+      assistantPeerId: options.assistantPeerId !== undefined ? options.assistantPeerId : "assistant",
+      userPeerId: options.userPeerId !== undefined ? options.userPeerId : "user"
     };
   }
 

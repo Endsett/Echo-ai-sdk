@@ -1,5 +1,5 @@
 import { ValidationError } from "../core/exceptions";
-import type { MemoryVectorStore, SearchResult } from "../rag/knowledge";
+import type { MemoryVectorStore } from "../rag/knowledge";
 import type { HonchoMemoryStore, MemorySearchResult, SemanticSearchOptions } from "./honcho";
 
 /**
@@ -28,10 +28,10 @@ import type { HonchoMemoryStore, MemorySearchResult, SemanticSearchOptions } fro
  */
 export class SemanticMemorySearch {
   private honchoStore: HonchoMemoryStore;
-  private vectorStore?: MemoryVectorStore;
+  private vectorStore: MemoryVectorStore | undefined;
 
   constructor(honchoStore: HonchoMemoryStore, vectorStore?: MemoryVectorStore) {
-    if (!honchoStore) {
+    if (honchoStore === null || honchoStore === undefined) {
       throw new ValidationError("SemanticMemorySearch", "honchoStore is required.");
     }
     this.honchoStore = honchoStore;
@@ -56,32 +56,43 @@ export class SemanticMemorySearch {
     if (!query) throw new ValidationError("search", "query is required.");
 
     // Gather results from all sources in parallel
-    const [honchoResults, vectorResults] = await Promise.allSettled([
+    const settled = await Promise.allSettled([
       this.honchoStore.searchMemory(peerId, query, opts),
-      this._searchVectors(query, opts),
+      this._searchVectors(query, opts)
     ]);
+
+    const honchoResults = settled[0];
+    const vectorResults = settled[1];
 
     const allResults: MemorySearchResult[] = [];
 
     if (honchoResults.status === "fulfilled") {
-      allResults.push(...honchoResults.value);
+      for (let i = 0; i < honchoResults.value.length; i++) {
+        allResults.push(honchoResults.value[i]);
+      }
     }
 
     if (vectorResults.status === "fulfilled") {
-      allResults.push(...vectorResults.value);
+      for (let i = 0; i < vectorResults.value.length; i++) {
+        allResults.push(vectorResults.value[i]);
+      }
     }
 
     // Deduplicate by content, keeping highest score
     const seen = new Map<string, MemorySearchResult>();
-    for (const result of allResults) {
-      const key = result.content.trim().toLowerCase();
-      const existing = seen.get(key);
-      if (!existing || result.score > existing.score) {
+    for (let i = 0; i < allResults.length; i++) {
+      const result: MemorySearchResult = allResults[i];
+      const key: string = result.content.trim().toLowerCase();
+      const existing: MemorySearchResult | undefined = seen.get(key);
+      if (existing === undefined || result.score > existing.score) {
         seen.set(key, result);
       }
     }
 
-    return Array.from(seen.values()).sort(function(a, b) { return b.score - a.score });
+    const values: MemorySearchResult[] = Array.from(seen.values());
+    return values.sort(function(a: MemorySearchResult, b: MemorySearchResult): number {
+      return b.score - a.score;
+    });
   }
 
   /**
@@ -90,7 +101,7 @@ export class SemanticMemorySearch {
   async searchMessages(
     sessionId: string,
     query: string,
-    limit = 10
+    limit: number = 10
   ): Promise<MemorySearchResult[]> {
     if (!sessionId) throw new ValidationError("searchMessages", "sessionId is required.");
     if (!query) throw new ValidationError("searchMessages", "query is required.");
@@ -110,8 +121,10 @@ export class SemanticMemorySearch {
     if (!query) throw new ValidationError("searchConclusions", "query is required.");
 
     // Use searchMemory but filter to conclusions only
-    const results = await this.honchoStore.searchMemory(peerId, query, opts);
-    return results.filter((r) => r.source === "honcho_conclusion");
+    const results: MemorySearchResult[] = await this.honchoStore.searchMemory(peerId, query, opts);
+    return results.filter(function(r: MemorySearchResult): boolean {
+      return r.source === "honcho_conclusion";
+    });
   }
 
   /**
@@ -125,8 +138,8 @@ export class SemanticMemorySearch {
   // ─── Private ───────────────────────────────────────────────────────────
 
   private async _searchVectors(
-    query: string,
-    opts: SemanticSearchOptions
+    _query: string,
+    _opts: SemanticSearchOptions
   ): Promise<MemorySearchResult[]> {
     if (!this.vectorStore) return [];
 
