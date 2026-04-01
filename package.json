@@ -1,6 +1,6 @@
 {
   "name": "echo-ai-sdk-ts",
-  "version": "2.6.3",
+  "version": "2.7.0",
   "description": "Echo AI SDK: Tier 5 Cloud Native (AWS Bedrock/SageMaker, GCP Vertex, Azure OpenAI/ML)",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
