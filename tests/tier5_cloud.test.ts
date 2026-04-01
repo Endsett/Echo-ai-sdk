@@ -94,4 +94,30 @@ describe("Tier 5: Cloud Native Integrations", () => {
       expect(res.provider_name).toBe("azure_openai");
     });
   });
+
+  describe("SageMaker Deployments", () => {
+    it("should verify SageMaker endpoint creation correctly passes the instanceType value", async () => {
+      const { AwsSageMakerDeployer } = await import("../src/deployment/aws_sagemaker");
+      const deployer = new AwsSageMakerDeployer({ region: "us-east-1" });
+      
+      // Mock the send command to intercept the CreateEndpointConfigCommand
+      let capturedCommand: any;
+      (deployer as any).client.send = vi.fn().mockImplementation(async (cmd) => {
+        if (cmd.constructor.name === "CreateEndpointConfigCommand") {
+          capturedCommand = cmd;
+        }
+        return { EndpointStatus: "Creating" }; // Returns dummy response
+      });
+
+      await deployer.deployEndpoint({
+        modelName: "test-model",
+        primaryContainerImage: "test-image",
+        executionRoleArn: "arn:aws:iam::123:role/test",
+        instanceType: "ml.p3.2xlarge"
+      });
+
+      expect(capturedCommand).toBeDefined();
+      expect(capturedCommand.input.ProductionVariants[0].InstanceType).toBe("ml.p3.2xlarge");
+    });
+  });
 });
