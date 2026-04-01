@@ -62,7 +62,7 @@ export class AwsSageMakerDeployer {
           VariantName: "AllTraffic",
           ModelName: params.modelName,
           InitialInstanceCount: params.initialInstanceCount || 1,
-          InstanceType: params.instanceType || "ml.g5.xlarge",
+          InstanceType: (params.instanceType || "ml.g5.xlarge") as any,
         }]
       }));
 
