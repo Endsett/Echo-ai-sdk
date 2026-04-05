@@ -3,35 +3,33 @@ import { OpenAIProvider } from "../src/models/openai";
 
 vi.mock("openai", () => {
   return {
-    default: vi.fn().mockImplementation(() => {
-      return {
-        chat: {
-          completions: {
-            create: async () => ({
-              model: "gpt-4-turbo",
-              choices: [
-                {
-                  message: {
-                    content: null,
-                    tool_calls: [
-                      {
-                        id: "call_123",
-                        type: "function",
-                        function: {
-                          name: "get_weather",
-                          arguments: "{\"location\":\"LA\"}"
-                        }
+    default: class {
+      chat = {
+        completions: {
+          create: async () => ({
+            model: "gpt-4-turbo",
+            choices: [
+              {
+                message: {
+                  content: null,
+                  tool_calls: [
+                    {
+                      id: "call_123",
+                      type: "function",
+                      function: {
+                        name: "get_weather",
+                        arguments: "{\"location\":\"LA\"}"
                       }
-                    ]
-                  }
+                    }
+                  ]
                 }
-              ],
-              usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 }
-            })
-          }
+              }
+            ],
+            usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 }
+          })
         }
       };
-    })
+    }
   };
 });
 
