@@ -2,6 +2,7 @@ import { BaseProvider } from "../models";
 import { ChatRequest, ChatResponse } from "../models/schemas";
 import { GatewayRoutingError } from "../core/exceptions";
 import { GatewayMiddleware, applyRequestMiddleware, applyResponseMiddleware } from "./middleware";
+import { StreamChunk, StreamOptions, EnhancedAsyncStream } from "../core/streaming";
 
 /**
  * Gateway that manages multiple AI providers with automatic failover and middleware support.
@@ -166,5 +167,132 @@ export class AIModelGateway {
     }
 
     throw new GatewayRoutingError(errors);
+  }
+
+  /**
+   * Enhanced streaming with structured chunks, backpressure, and error handling.
+   * 
+   * @param request - The chat completion request
+   * @param options - Stream options for backpressure and retry handling
+   * @returns An async generator yielding structured stream chunks
+   * 
+   * @example
+   * ```typescript
+   * for await (const chunk of gateway.chatStreamEnhanced(request)) {
+   *   switch (chunk.type) {
+   *     case "content":
+   *       console.log(chunk.content);
+   *       break;
+   *     case "tool_call":
+   *       console.log("Tool called:", chunk.toolCall);
+   *       break;
+   *     case "error":
+   *       console.error("Stream error:", chunk.error);
+   *       break;
+   *   }
+   * }
+   * ```
+   */
+  async *chatStreamEnhanced(request: ChatRequest, options?: StreamOptions): AsyncGenerator<StreamChunk, void, unknown> {
+    const errors: string[] = [];
+    const processedRequest = await applyRequestMiddleware(this.middlewares, request);
+
+    for (const provider of this.providers) {
+      // Check if provider supports enhanced streaming
+      if (provider.supportsEnhancedStreaming && provider.chatStreamEnhanced) {
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            console.log(`[Gateway] Routing enhanced stream to ${provider.providerName} (Attempt ${attempt}/3)`);
+            
+            const stream = provider.chatStreamEnhanced(processedRequest, options);
+            const firstIter = await stream.next();
+            
+            if (!firstIter.done) {
+              // Apply response middleware to each chunk
+              for (const middleware of this.middlewares) {
+                if (middleware.onStreamChunk) {
+                  const transformed = await middleware.onStreamChunk(firstIter.value, processedRequest);
+                  yield transformed;
+                } else {
+                  yield firstIter.value;
+                }
+              }
+            } else {
+              return;
+            }
+
+            for await (const chunk of stream) {
+              // Apply response middleware to each chunk
+              for (const middleware of this.middlewares) {
+                if (middleware.onStreamChunk) {
+                  const transformed = await middleware.onStreamChunk(chunk, processedRequest);
+                  yield transformed;
+                } else {
+                  yield chunk;
+                }
+              }
+            }
+            return;
+
+          } catch (e: any) {
+            console.warn(`[Gateway] Provider ${provider.providerName} enhanced stream attempt ${attempt} failed: ${e.message}`);
+            errors.push(`[${provider.providerName} - Attempt ${attempt}] ${e.message}`);
+
+            // Emit error chunk
+            yield {
+              type: "error",
+              error: {
+                message: e.message,
+                code: e.code,
+                retryable: attempt < 3,
+              },
+              metadata: {
+                provider: provider.providerName,
+              }
+            };
+
+            for (const mw of this.middlewares) {
+              mw.onError?.(e, provider.providerName);
+            }
+
+            if (attempt < 3) {
+              const backoffMs = Math.pow(attempt, 2) * 500;
+              await new Promise(resolve => setTimeout(resolve, backoffMs));
+            }
+          }
+        }
+      } else {
+        // Fallback to regular streaming wrapped in enhanced format
+        try {
+          yield* this.wrapTextStream(provider, processedRequest, options);
+          return;
+        } catch (e: any) {
+          console.warn(`[Gateway] Provider ${provider.providerName} fallback streaming failed: ${e.message}`);
+          errors.push(`[${provider.providerName}] ${e.message}`);
+        }
+      }
+    }
+
+    throw new GatewayRoutingError(errors);
+  }
+
+  /**
+   * Helper to wrap text streams in enhanced format
+   */
+  private async *wrapTextStream(provider: BaseProvider, request: ChatRequest, options?: StreamOptions): AsyncGenerator<StreamChunk, void, unknown> {
+    const textStream = provider.chatStream(request);
+    const model = request.model_family === "smart" ? "smart-model" : "fast-model";
+    
+    // Create a simple wrapper since we can't access protected method
+    for await (const content of textStream) {
+      yield {
+        type: "content",
+        content,
+        metadata: {
+          provider: provider.providerName,
+          model,
+        }
+      };
+    }
   }
 }

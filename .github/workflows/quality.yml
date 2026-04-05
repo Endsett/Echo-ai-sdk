@@ -1,0 +1,265 @@
+name: Quality Gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  performance:
+    name: Performance Regression Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Performance Benchmark
+        run: |
+          # Create a simple performance test
+          mkdir -p perf-test
+          cat > perf-test/benchmark.js << 'EOF'
+          const { performance } = require('perf_hooks');
+          const SDK = require('../dist/index.js');
+          
+          async function benchmark() {
+            const iterations = 1000;
+            const start = performance.now();
+            
+            for (let i = 0; i < iterations; i++) {
+              // Test basic SDK operations
+              const gateway = new SDK.AIModelGateway([]);
+              const agent = SDK.createToolAgent([]);
+            }
+            
+            const end = performance.now();
+            const avgTime = (end - start) / iterations;
+            
+            console.log(`Average initialization time: ${avgTime.toFixed(2)}ms`);
+            
+            // Fail if too slow
+            if (avgTime > 10) {
+              console.error('Performance regression detected!');
+              process.exit(1);
+            }
+          }
+          
+          benchmark();
+          EOF
+          
+          node perf-test/benchmark.js
+
+  api-compatibility:
+    name: API Compatibility Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Check API compatibility
+        run: |
+          # Extract exported symbols
+          node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('dist/index.d.ts', 'utf8');
+            const exports = content.match(/export\s+(?:const|function|class|interface|type)\s+(\w+)/g) || [];
+            console.log('Exported symbols:', exports.length);
+            
+            // Save current exports
+            fs.writeFileSync('current-exports.txt', exports.join('\\n'));
+          "
+
+      - name: Compare with main branch
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin main
+          git checkout origin/main
+          npm ci
+          npm run build
+          
+          node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('dist/index.d.ts', 'utf8');
+            const exports = content.match(/export\s+(?:const|function|class|interface|type)\s+(\w+)/g) || [];
+            fs.writeFileSync('main-exports.txt', exports.join('\\n'));
+          "
+          
+          git checkout -
+          
+          # Compare exports
+          if ! diff -u main-exports.txt current-exports.txt; then
+            echo "API changes detected"
+          else
+            echo "No API changes"
+          fi
+
+  documentation:
+    name: Documentation Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check documentation coverage
+        run: |
+          # Check if all exported items have documentation
+          echo "Checking documentation coverage..."
+          
+          # Check README exists
+          if [ ! -f README.md ]; then
+            echo "❌ README.md is missing"
+            exit 1
+          fi
+          
+          # Check if docs directory has content
+          if [ -d "docs" ] && [ "$(ls -A docs)" ]; then
+            echo "✅ Documentation directory exists with content"
+          else
+            echo "⚠️ No additional documentation found"
+          fi
+          
+          # Check for JSDoc comments in source
+          JSDOC_COUNT=$(grep -r "@param\|@returns\|@example" src/ | wc -l)
+          echo "Found $JSDOC_COUNT JSDoc documentation blocks"
+          
+          if [ $JSDOC_COUNT -lt 10 ]; then
+            echo "⚠️ Consider adding more JSDoc documentation"
+          fi
+
+  bundle-analysis:
+    name: Bundle Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Analyze bundle
+        run: |
+          echo "## Bundle Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # CJS Bundle
+          CJS_SIZE=$(wc -c < dist/index.js)
+          echo "### CommonJS Bundle" >> $GITHUB_STEP_SUMMARY
+          echo "- Size: $CJS_SIZE bytes" >> $GITHUB_STEP_SUMMARY
+          echo "- Size gzipped: $(gzip -c dist/index.js | wc -c) bytes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # ESM Bundle
+          ESM_SIZE=$(wc -c < dist/index.mjs)
+          echo "### ES Module Bundle" >> $GITHUB_STEP_SUMMARY
+          echo "- Size: $ESM_SIZE bytes" >> $GITHUB_STEP_SUMMARY
+          echo "- Size gzipped: $(gzip -c dist/index.mjs | wc -c) bytes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Dependencies
+          echo "### Dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "- Production: $(npm ls --prod --depth=0 --json | jq -r '.dependencies | keys | length' || echo 'N/A')" >> $GITHUB_STEP_SUMMARY
+          echo "- Development: $(npm ls --dev --depth=0 --json | jq -r '.devDependencies | keys | length' || echo 'N/A')" >> $GITHUB_STEP_SUMMARY
+
+  metrics:
+    name: Build Metrics
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Collect metrics
+        run: |
+          # Build time
+          BUILD_START=$(date +%s%N)
+          npm run build
+          BUILD_END=$(date +%s%N)
+          BUILD_TIME=$(( (BUILD_END - BUILD_START) / 1000000 ))
+          
+          # Test time
+          TEST_START=$(date +%s%N)
+          npm test
+          TEST_END=$(date +%s%N)
+          TEST_TIME=$(( (TEST_END - TEST_START) / 1000000 ))
+          
+          # Bundle sizes
+          CJS_SIZE=$(wc -c < dist/index.js)
+          ESM_SIZE=$(wc -c < dist/index.mjs)
+          
+          # Create metrics file
+          cat > metrics.json << EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "metrics": {
+              "build_time_ms": $BUILD_TIME,
+              "test_time_ms": $TEST_TIME,
+              "bundle_size_cjs": $CJS_SIZE,
+              "bundle_size_esm": $ESM_SIZE,
+              "bundle_size_total": $((CJS_SIZE + ESM_SIZE))
+            }
+          }
+          EOF
+          
+          echo "Build metrics collected"
+          cat metrics.json
+
+      - name: Store metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-metrics
+          path: metrics.json
+          retention-days: 90

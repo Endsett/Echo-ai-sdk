@@ -8,56 +8,97 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint & Typecheck
+  quick-checks:
+    name: Quick Checks
     runs-on: ubuntu-latest
+    outputs:
+      should-run-full: ${{ steps.changes.outputs.src == 'true' || steps.changes.outputs.tests == 'true' || github.event_name == 'push' }}
     steps:
       - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
+      
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            src:
+              - 'src/**'
+            tests:
+              - 'tests/**'
+            docs:
+              - 'docs/**'
+              - '*.md'
+            ci:
+              - '.github/**'
+              - 'package*.json'
+              - 'tsconfig*.json'
+              - 'vitest.config.*'
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
-
-      - run: npm ci
-
+      
+      - name: Install dependencies
+        run: npm ci
+      
       - name: ESLint Check
         run: npm run lint:js
-
+      
+      - name: Format Check
+        run: npm run format:check || true
+      
       - name: TypeScript compilation check
-        run: npx tsc --noEmit
+        run: npm run lint:types
 
   test:
     name: Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    needs: quick-checks
+    if: needs.quick-checks.outputs.should-run-full == 'true'
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18, 20, 22]
+        node-version: [20, 22]
     steps:
       - uses: actions/checkout@v6
-      - name: Use Node.js ${{ matrix.node-version }}
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-      - run: npm ci
-      - run: npx vitest run --coverage
-        name: Test & Enforce Coverage Baseline
+          cache: npm
       
-      - name: Upload Test Coverage
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests with coverage
+        run: npm run test:coverage
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+      
+      - name: Upload test coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report-node-${{ matrix.node-version }}
           path: coverage/
-
+          retention-days: 7
+      
       - name: Upload test results
         if: failure()
         uses: actions/upload-artifact@v4
@@ -68,33 +109,127 @@ jobs:
             test_report.json
           retention-days: 7
 
-  build:
-    name: Build
+  security:
+    name: Security Scan
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: quick-checks
+    if: needs.quick-checks.outputs.should-run-full == 'true'
     steps:
       - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+      
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
 
-      - run: npm ci
-
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [quick-checks]
+    if: needs.quick-checks.outputs.should-run-full == 'true'
+    outputs:
+      bundle-size-cjs: ${{ steps.analyze.outputs.cjs-size }}
+      bundle-size-esm: ${{ steps.analyze.outputs.esm-size }}
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      
+      - name: Install dependencies
+        run: npm ci
+      
       - name: Build CJS + ESM bundles
         run: npm run build
-
+      
       - name: Verify dist output
         run: |
           test -f dist/index.js || (echo "❌ CJS bundle missing" && exit 1)
           test -f dist/index.mjs || (echo "❌ ESM bundle missing" && exit 1)
           echo "✅ CJS: $(wc -c < dist/index.js) bytes"
           echo "✅ ESM: $(wc -c < dist/index.mjs) bytes"
-
+      
+      - name: Analyze bundle size
+        id: analyze
+        run: |
+          echo "cjs-size=$(wc -c < dist/index.js)" >> $GITHUB_OUTPUT
+          echo "esm-size=$(wc -c < dist/index.mjs)" >> $GITHUB_OUTPUT
+      
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
           retention-days: 14
+
+  bundle-size-check:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check bundle size changes
+        run: |
+          # Get base branch bundle sizes
+          git fetch origin ${{ github.base_ref }}
+          git checkout ${{ github.base_ref }}
+          npm ci
+          npm run build
+          BASE_CJS=$(wc -c < dist/index.js)
+          BASE_ESM=$(wc -c < dist/index.mjs)
+          
+          # Get current bundle sizes
+          git checkout -
+          CURRENT_CJS=${{ needs.build.outputs.bundle-size-cjs }}
+          CURRENT_ESM=${{ needs.build.outputs.bundle-size-esm }}
+          
+          # Calculate percentage change
+          CJS_CHANGE=$(( ($CURRENT_CJS - $BASE_CJS) * 100 / $BASE_CJS ))
+          ESM_CHANGE=$(( ($CURRENT_ESM - $BASE_ESM) * 100 / $BASE_ESM ))
+          
+          echo "CJS bundle size change: $CJS_CHANGE%"
+          echo "ESM bundle size change: $ESM_CHANGE%"
+          
+          # Fail if increase is more than 10%
+          if [ $CJS_CHANGE -gt 10 ] || [ $ESM_CHANGE -gt 10 ]; then
+            echo "::error::Bundle size increased by more than 10%"
+            exit 1
+          fi

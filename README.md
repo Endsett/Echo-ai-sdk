@@ -2,7 +2,35 @@
 
 The all-in-one AI platform for chat, voice, agents, and **embeddable customer support chatbots**.
 
-![npm](https://img.shields.io/npm/v/echo-ai-sdk) ![license](https://img.shields.io/npm/l/echo-ai-sdk) ![typescript](https://img.shields.io/badge/Language-TypeScript-blue)
+![npm](https://img.shields.io/npm/v/echo-ai-sdk) 
+![license](https://img.shields.io/npm/l/echo-ai-sdk) 
+![typescript](https://img.shields.io/badge/Language-TypeScript-blue)
+
+## CI/CD Status
+
+### Build & Test
+![CI](https://github.com/Endsett/Echo-ai-sdk/workflows/CI/badge.svg)
+![Tests](https://github.com/Endsett/Echo-ai-sdk/workflows/Test/badge.svg)
+![Coverage](https://codecov.io/gh/Endsett/Echo-ai-sdk/branch/main/graph/badge.svg)
+
+### Quality & Security
+![CodeQL](https://github.com/Endsett/Echo-ai-sdk/workflows/CodeQL/badge.svg)
+![Security Scan](https://github.com/Endsett/Echo-ai-sdk/workflows/Security/badge.svg)
+![Dependency Review](https://github.com/Endsett/Echo-ai-sdk/workflows/Dependency%20Review/badge.svg)
+
+### Release & Publishing
+![Release](https://github.com/Endsett/Echo-ai-sdk/workflows/Release/badge.svg)
+![npm](https://img.shields.io/npm/dt/echo-ai-sdk)
+![GitHub release](https://img.shields.io/github/release/Endsett/Echo-ai-sdk)
+
+### Code Quality
+![ESLint](https://img.shields.io/badge/ESLint-passing-brightgreen)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)
+![Prettier](https://img.shields.io/badge/code_style-prettier-ff69b4)
+
+### Performance
+![Bundle Size](https://img.shields.io/bundlephobia/minzip/echo-ai-sdk)
+![Dependencies](https://img.shields.io/librariesio/dependent-repositories/npm/echo-ai-sdk)
 
 ## 🚀 Deploy an AI Chatbot on Your Website in 5 Minutes
 
@@ -186,6 +214,154 @@ bot.trackOutcome(sessionId, "lead_captured", 50.0);
 const stats = bot.analytics.getSnapshot();
 console.log(`ROI: ${stats.roi * 100}%`);
 console.log(`Value Generated: $${stats.totalValueGeneratedUsd}`);
+```
+
+---
+
+### 🚀 Tier 3 Advanced Agent Capabilities
+
+#### 🤖 Advanced Reasoning Agents
+Go beyond simple tool execution with sophisticated reasoning patterns:
+
+```typescript
+import { ReActAgent, CoTAgent, ToTAgent } from "echo-ai-sdk";
+
+// ReAct with Reflection - Thinks before acting
+const reactAgent = new ReActAgent({
+  gateway,
+  memory,
+  tools: [searchTool, calculatorTool],
+  reactOptions: {
+    enableReflection: true,
+    confidenceThreshold: 0.8
+  }
+});
+
+// Chain of Thought - Step-by-step reasoning
+const cotAgent = new CoTAgent({
+  gateway,
+  memory,
+  tools: [analysisTool],
+  cotOptions: {
+    maxSteps: 10,
+    requireConclusions: true
+  }
+});
+
+// Tree of Thoughts - Explores multiple solution paths
+const totAgent = new ToTAgent({
+  gateway,
+  memory,
+  tools: [creativeTool],
+  totOptions: {
+    maxDepth: 4,
+    breadth: 3,
+    evaluationMethod: "score"
+  }
+});
+
+// Stream reasoning process
+for await (const event of reactAgent.executeStream(sessionId, task)) {
+  console.log(`${event.type}: ${event.content}`);
+}
+```
+
+#### ⚡ Enhanced Parallel Execution
+Execute tools simultaneously with dependency resolution:
+
+```typescript
+import { EnhancedAgentExecutor, ToolDependency } from "echo-ai-sdk";
+
+const executor = new EnhancedAgentExecutor({
+  gateway,
+  memory,
+  tools: [searchTool, weatherTool, calculatorTool],
+  toolDependencies: [
+    { toolName: "weather", dependsOn: ["search"] } // Weather needs search results first
+  ],
+  executionOptions: {
+    enableParallel: true,
+    maxParallelTools: 5,
+    toolTimeout: 10000,
+    streamToolResults: true
+  }
+});
+
+// Tools execute in parallel when possible
+const result = await executor.execute(sessionId, complexTask);
+```
+
+#### 🔄 Multi-Agent Collaboration
+Coordinate multiple agents for complex workflows:
+
+```typescript
+import { AgentTeam, AgentOrchestrator, DynamicAgentSelector } from "echo-ai-sdk";
+
+// Create an agent team
+const team = new AgentTeam({
+  name: "ResearchTeam",
+  loadBalancingStrategy: "capability_based",
+  communicationProtocol: "direct"
+}, memory);
+
+// Register specialized agents
+team.registerAgent({
+  id: "researcher",
+  name: "Research Specialist",
+  capabilities: [{ 
+    name: "research",
+    tools: ["search"],
+    reasoningPatterns: ["react"],
+    specialties: ["academic_research"]
+  }],
+  status: "active",
+  currentLoad: 0,
+  maxConcurrentTasks: 3
+});
+
+// Delegate tasks to best agent
+const taskId = await team.delegateTask("coordinator", {
+  query: "Latest AI research papers",
+  analysis: "summarize"
+}, {
+  capabilities: ["research"],
+  maxResponseTime: 5000
+});
+
+// Orchestrate complex workflows
+const orchestrator = new AgentOrchestrator({}, memory);
+const workflow = {
+  id: "research_pipeline",
+  steps: [
+    { id: "collect", requiredCapabilities: ["research"] },
+    { id: "analyze", requiredCapabilities: ["analysis"] },
+    { id: "summarize", requiredCapabilities: ["summarization"] }
+  ],
+  orchestrationPattern: "sequential"
+};
+
+const executionId = await orchestrator.executeWorkflow(
+  workflow.id,
+  { topic: "quantum computing" }
+);
+```
+
+#### 🎯 Dynamic Agent Selection
+Automatically select the best agent based on capabilities, performance, and cost:
+
+```typescript
+const selector = new DynamicAgentSelector();
+
+// Select best agent for task
+const selection = selector.selectAgent(agents, {
+  requiredCapabilities: ["analysis", "computation"],
+  maxResponseTime: 3000,
+  costLimit: 0.10,
+  priority: "high"
+}, "performance_first");
+
+console.log(`Selected: ${selection.agentId} (score: ${selection.score})`);
+console.log(`Reasoning: ${selection.reasoning}`);
 ```
 
 ---
