@@ -6,62 +6,58 @@ import { AzureOpenAiProvider } from "../src/models/azure_openai";
 // Mocking AWS Bedrock Client
 vi.mock("@aws-sdk/client-bedrock-runtime", () => {
   return {
-    BedrockRuntimeClient: vi.fn().mockImplementation(() => {
-      return {
-        send: async () => ({
-          body: new TextEncoder().encode(JSON.stringify({
-            content: [{ text: "AWS Bedrock Response" }],
-            usage: { input_tokens: 10, output_tokens: 5 }
-          }))
-        })
-      };
-    }),
-    InvokeModelCommand: vi.fn()
+    BedrockRuntimeClient: class {
+      send = async () => ({
+        body: new TextEncoder().encode(JSON.stringify({
+          content: [{ text: "AWS Bedrock Response" }],
+          usage: { input_tokens: 10, output_tokens: 5 }
+        }))
+      });
+    },
+    InvokeModelCommand: class {
+      constructor(public input: any) {}
+    }
   };
 });
 
 // Mocking GCP Vertex Client
 vi.mock("@google-cloud/vertexai", () => {
   return {
-    VertexAI: vi.fn().mockImplementation(() => {
-      return {
-        getGenerativeModel: () => ({
-          generateContent: async () => ({
-            response: {
-              candidates: [{ content: { parts: [{ text: "GCP Vertex Response" }] } }],
-              usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5, totalTokenCount: 15 }
-            }
-          })
+    VertexAI: class {
+      getGenerativeModel = () => ({
+        generateContent: async () => ({
+          response: {
+            candidates: [{ content: { parts: [{ text: "GCP Vertex Response" }] } }],
+            usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5, totalTokenCount: 15 }
+          }
         })
-      };
-    })
+      });
+    }
   };
 });
 
 // Mocking Azure OpenAI Client
 vi.mock("openai", () => {
   return {
-    AzureOpenAI: vi.fn().mockImplementation(() => {
-      return {
-        chat: {
-          completions: {
-            create: async () => ({
-              choices: [{ message: { content: "Azure OpenAI Response" } }],
-              usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 }
-            })
-          }
+    AzureOpenAI: class {
+      chat = {
+        completions: {
+          create: async () => ({
+            choices: [{ message: { content: "Azure OpenAI Response" } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 }
+          })
         }
       };
-    })
+    }
   };
 });
 
 // Mock Azure Identity for Azure ML
 vi.mock("@azure/identity", () => {
-  return { DefaultAzureCredential: vi.fn() };
+  return { DefaultAzureCredential: class {} };
 });
 vi.mock("@azure/arm-machinelearning", () => {
-  return { AzureMachineLearningServicesManagementClient: vi.fn() };
+  return { AzureMachineLearningServicesManagementClient: class {} };
 });
 
 describe("Tier 5: Cloud Native Integrations", () => {

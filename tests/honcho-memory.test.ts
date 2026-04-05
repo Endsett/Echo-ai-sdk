@@ -33,13 +33,13 @@ const mockPeer = {
 };
 
 vi.mock("@honcho-ai/sdk", () => ({
-  Honcho: vi.fn().mockImplementation(() => ({
-    peer: vi.fn().mockResolvedValue(mockPeer),
-    session: vi.fn().mockResolvedValue(mockSession),
-    search: vi.fn().mockResolvedValue([
+  Honcho: class {
+    peer = vi.fn().mockResolvedValue(mockPeer);
+    session = vi.fn().mockResolvedValue(mockSession);
+    search = vi.fn().mockResolvedValue([
       { content: "I prefer TypeScript", peerId: "user", sessionId: "s1", metadata: {} },
-    ]),
-  })),
+    ]);
+  },
 }));
 
 // ─── Import after mocking ──────────────────────────────────────────────────

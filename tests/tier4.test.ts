@@ -6,17 +6,15 @@ import { CustomerSupportBot } from "../src/widget/bot";
 // Mock the HfInference fetch calls
 vi.mock("@huggingface/inference", () => {
   return {
-    HfInference: vi.fn().mockImplementation(() => {
-      return {
-        chatCompletion: async () => ({
-          choices: [{ message: { content: "HF Response" } }],
-          model: "mock-hf-model",
-          usage: { input_tokens: 0, output_tokens: 0 }
-        }),
-        textToSpeech: async () => new Blob(["mock-audio"]),
-        textToImage: async () => new Blob(["mock-image"])
-      };
-    })
+    HfInference: class {
+      chatCompletion = async () => ({
+        choices: [{ message: { content: "HF Response" } }],
+        model: "mock-hf-model",
+        usage: { input_tokens: 0, output_tokens: 0 }
+      });
+      textToSpeech = async () => new Blob(["mock-audio"]);
+      textToImage = async () => new Blob(["mock-image"]);
+    }
   };
 });
 
