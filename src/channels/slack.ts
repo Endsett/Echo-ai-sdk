@@ -28,7 +28,7 @@ export class SlackAdapter extends ChannelAdapter {
   async handleEvent(event: any): Promise<void> {
     if (event.type === "message" && !event.bot_id && event.text) {
       const sessionId = `slack_${event.channel}_${event.user}`;
-      const reply = await this.handleMessage(sessionId, event.text);
+      await this.handleMessage(sessionId, event.text);
       // Logic to post reply back to Slack...
     }
   }

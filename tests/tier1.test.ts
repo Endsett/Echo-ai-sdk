@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { KnowledgeBase, chunkText } from "../src/rag/knowledge";
 import { ConversationAnalytics } from "../src/analytics/tracker";
 import { HandoffManager } from "../src/analytics/handoff";

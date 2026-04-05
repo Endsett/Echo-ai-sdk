@@ -7,7 +7,7 @@ import { APIConnector, APIConnectorConfig } from "./connector";
 import { AgentTelemetry } from "../core/telemetry";
 import { KnowledgeBase, KnowledgeBaseConfig } from "../rag";
 import { ConversationAnalytics } from "../analytics/tracker";
-import { HandoffManager, HandoffConfig, EscalationTrigger } from "../analytics/handoff";
+import { HandoffManager, HandoffConfig } from "../analytics/handoff";
 import { SessionStore, MemorySessionStore } from "../core/session";
 import { OutcomeTracker } from "../analytics/outcome";
 import { PIIRedactor } from "../analytics/redact";

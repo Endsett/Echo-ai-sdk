@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ChatMessage } from "../src/models";
 
 // ─── Mock the @honcho-ai/sdk module ────────────────────────────────────────
@@ -47,9 +47,7 @@ vi.mock("@honcho-ai/sdk", () => ({
 import {
   HonchoMemoryStore,
   SemanticMemorySearch,
-  type HonchoMemoryConfig,
   type SemanticSearchOptions,
-  type MemorySearchResult,
 } from "../src/memory";
 
 // ─── HonchoMemoryStore Tests ───────────────────────────────────────────────

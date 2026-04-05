@@ -5,6 +5,8 @@ export interface LogEntry {
   timestamp: string;
   message: string;
   context?: Record<string, any>;
+  duration?: number;
+  requestId?: string;
 }
 
 export class SDKLogger {
@@ -18,6 +20,68 @@ export class SDKLogger {
   }
 
   constructor(private minLevel: LogLevel = "info") {}
+
+  /**
+   * Start a performance timer for the given operation
+   * 
+   * @param operation - Name of the operation being timed
+   * @returns A timer object that can be used to end the timing
+   * 
+   * @example
+   * ```typescript
+   * const timer = logger.startTimer("API Request");
+   * await makeRequest();
+   * timer.end({ endpoint: "/chat" });
+   * ```
+   */
+  startTimer(operation: string) {
+    const startTime = Date.now();
+    const requestId = Math.random().toString(36).substr(2, 9);
+    
+    this.debug(`Starting ${operation}`, { requestId });
+    
+    return {
+      end: (context?: Record<string, any>) => {
+        const duration = Date.now() - startTime;
+        this.info(`Completed ${operation} in ${duration}ms`, {
+          ...context,
+          duration,
+          requestId
+        });
+      }
+    };
+  }
+
+  /**
+   * Log request details in debug mode
+   */
+  logRequest(provider: string, request: any, requestId?: string) {
+    if (this.minLevel === "debug") {
+      this.debug(`[${provider}] Request`, {
+        requestId,
+        messages: request.messages?.length || 0,
+        maxTokens: request.max_tokens,
+        temperature: request.temperature,
+        model: request.model_family || "default"
+      });
+    }
+  }
+
+  /**
+   * Log response details in debug mode
+   */
+  logResponse(provider: string, response: any, requestId?: string) {
+    if (this.minLevel === "debug") {
+      this.debug(`[${provider}] Response`, {
+        requestId,
+        contentLength: response.content?.length || 0,
+        promptTokens: response.usage?.prompt_tokens,
+        completionTokens: response.usage?.completion_tokens,
+        totalTokens: response.usage?.total_tokens,
+        model: response.model_name
+      });
+    }
+  }
 
   private log(level: LogLevel, message: string, context?: Record<string, any>) {
     if (this.levelValue(level) >= this.levelValue(this.minLevel)) {
@@ -34,7 +98,9 @@ export class SDKLogger {
       } else if (level === "warn") {
         console.warn(out);
       } else if (level === "debug") {
-        console.debug(out);
+        if (process.env.NODE_ENV !== "production") {
+          console.debug(out);
+        }
       } else {
         console.info(out);
       }

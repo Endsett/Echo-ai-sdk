@@ -68,9 +68,7 @@ export class AnthropicProvider extends BaseProvider {
     } as any) as any;
 
     for await (const chunk of stream) {
-      // @ts-ignore
       if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
-        // @ts-ignore
         yield chunk.delta.text;
       }
     }

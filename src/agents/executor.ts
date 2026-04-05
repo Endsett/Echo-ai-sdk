@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ChatMessage, ChatRequest, BaseProvider } from "../models";
+import { ChatRequest, BaseProvider } from "../models";
 import { AIModelGateway } from "../gateway/router";
 import { BaseMemoryStore } from "../memory/store";
 import { ToolContext } from "../tools/base";

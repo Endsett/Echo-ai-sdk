@@ -1,6 +1,7 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { BaseProvider } from "./base";
 import { ChatRequest, ChatResponse } from "./schemas";
+import { withRetries } from "../core/resilience";
 
 export interface AwsBedrockConfig {
   region: string;
@@ -53,14 +54,30 @@ export class AwsBedrockProvider extends BaseProvider {
     };
 
     try {
-      const command = new InvokeModelCommand({
-        modelId,
-        contentType: "application/json",
-        accept: "application/json",
-        body: JSON.stringify(payload)
-      });
-
-      const response = await this.client.send(command);
+      const response = await withRetries(
+        async () => {
+          const command = new InvokeModelCommand({
+            modelId,
+            contentType: "application/json",
+            accept: "application/json",
+            body: JSON.stringify(payload)
+          });
+          return await this.client.send(command);
+        },
+        {
+          maxRetries: 3,
+          initialDelayMs: 500,
+          maxDelayMs: 5000,
+          shouldRetry: (error: any) => {
+            // Retry on throttling and transient network errors
+            return error.name === 'ThrottlingException' || 
+                   error.name === 'ServiceUnavailable' ||
+                   error.$retryable;
+          }
+        },
+        "AWS Bedrock invocation"
+      );
+      
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
       return {
@@ -74,7 +91,20 @@ export class AwsBedrockProvider extends BaseProvider {
         model_name: modelId,
       };
     } catch (e: any) {
-      throw new Error(`AWS Bedrock invocation failed: ${e.message}`);
+      // Enhance error message with troubleshooting hints
+      let errorMessage = `AWS Bedrock invocation failed: ${e.message}`;
+      
+      if (e.name === 'ThrottlingException') {
+        errorMessage += `\nHint: Rate limit exceeded. Try reducing request frequency or using a different model.`;
+      } else if (e.name === 'ValidationException') {
+        errorMessage += `\nHint: Check your request parameters and model ID (${modelId}).`;
+      } else if (e.name === 'AccessDeniedException') {
+        errorMessage += `\nHint: Check your IAM permissions for bedrock:InvokeModel.`;
+      } else if (e.name === 'ServiceUnavailable') {
+        errorMessage += `\nHint: AWS Bedrock service is temporarily unavailable. Please retry later.`;
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 

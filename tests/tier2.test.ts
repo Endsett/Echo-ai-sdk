@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { CustomerSupportBot } from "../src/widget/bot";
 import { FileSessionStore } from "../src/core/session";
 import { TelegramAdapter } from "../src/channels/telegram";
@@ -32,13 +32,6 @@ describe("Tier 2: Omnichannel & Outcome Billing", () => {
     });
 
     await bot.chat("user_123", "Hello bot");
-    
-    // Create new bot instance with same store
-    const bot2 = new CustomerSupportBot({
-      companyName: "TestCorp",
-      sessionStore: store,
-      gateway: { chatComplete: async () => ({ content: "Response", provider_name: "test", model_name: "test" }) } as any,
-    });
     
     const session = await store.get("user_123");
     expect(session).not.toBeNull();

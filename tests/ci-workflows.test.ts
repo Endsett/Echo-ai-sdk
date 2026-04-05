@@ -4,20 +4,20 @@ import { resolve } from "path";
 import * as yaml from "yaml"; // Using yaml dev dependency for parsing
 
 describe("GitHub Actions Workflows CI/CD Verification", () => {
-  it("Verify CI 'Release' workflow triggers correctly on push to main", () => {
+  it("Verify CI 'Release' workflow triggers correctly on release", () => {
     const yamlPath = resolve(__dirname, "../.github/workflows/npm-publish.yml");
     expect(existsSync(yamlPath)).toBe(true);
 
     const fileContent = readFileSync(yamlPath, "utf8");
     const parsed = yaml.parse(fileContent);
 
-    // The trigger must map to: on: push: branches: [main]
+    // The trigger must map to: on: release: types: [published]
     expect(parsed.on).toBeDefined();
-    expect(parsed.on.push).toBeDefined();
-    expect(parsed.on.push.branches).toContain("main");
+    expect(parsed.on.release).toBeDefined();
+    expect(parsed.on.release.types).toContain("published");
   });
 
-  it("Verify NPM and GitHub Packages steps use the npm-publish action with correct secrets", () => {
+  it("Verify NPM and GitHub Packages steps use direct npm publish with correct secrets", () => {
     const yamlPath = resolve(__dirname, "../.github/workflows/npm-publish.yml");
     const fileContent = readFileSync(yamlPath, "utf8");
     const parsed = yaml.parse(fileContent);
@@ -28,19 +28,16 @@ describe("GitHub Actions Workflows CI/CD Verification", () => {
     expect(publishNpmJob).toBeDefined();
     expect(publishGprJob).toBeDefined();
 
-    // Verify NPM publish step uses JS-DevTools/npm-publish with NPM_TOKEN
+    // Verify NPM publish step uses direct npm publish with NPM_TOKEN
     const npmStep = publishNpmJob.steps.find((step: any) => step.name === "Publish to npm");
     expect(npmStep).toBeDefined();
-    expect(npmStep.uses.startsWith("JS-DevTools/npm-publish")).toBe(true);
-    expect(npmStep.with.token).toBe("${{ secrets.NPM_TOKEN }}");
-    expect(npmStep.with.provenance).toBe(true);
-    expect(npmStep.with.access).toBe("public");
+    expect(npmStep.run).toBe("npm publish --provenance --access public");
+    expect(npmStep.env.NODE_AUTH_TOKEN).toBe("${{ secrets.NPM_TOKEN }}");
 
-    // Verify GPR publish step uses JS-DevTools/npm-publish with GITHUB_TOKEN
+    // Verify GPR publish step uses direct npm publish with GITHUB_TOKEN
     const gprStep = publishGprJob.steps.find((step: any) => step.name === "Publish to GitHub Packages");
     expect(gprStep).toBeDefined();
-    expect(gprStep.uses.startsWith("JS-DevTools/npm-publish")).toBe(true);
-    expect(gprStep.with.token).toBe("${{ secrets.GITHUB_TOKEN }}");
-    expect(gprStep.with.registry).toContain("npm.pkg.github.com");
+    expect(gprStep.run).toBe("npm publish");
+    expect(gprStep.env.NODE_AUTH_TOKEN).toBe("${{ secrets.GITHUB_TOKEN }}");
   });
 });

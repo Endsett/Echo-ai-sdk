@@ -39,17 +39,20 @@ vi.mock("@google-cloud/vertexai", () => {
 });
 
 // Mocking Azure OpenAI Client
-vi.mock("@azure/openai", () => {
+vi.mock("openai", () => {
   return {
-    OpenAIClient: vi.fn().mockImplementation(() => {
+    AzureOpenAI: vi.fn().mockImplementation(() => {
       return {
-        getChatCompletions: async () => ({
-          choices: [{ message: { content: "Azure OpenAI Response" } }],
-          usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 }
-        })
+        chat: {
+          completions: {
+            create: async () => ({
+              choices: [{ message: { content: "Azure OpenAI Response" } }],
+              usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 }
+            })
+          }
+        }
       };
-    }),
-    AzureKeyCredential: vi.fn()
+    })
   };
 });
 

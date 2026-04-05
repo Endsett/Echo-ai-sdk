@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { EchoAI, createTool, ChatAgent, ToolAgent, AgentExecutor } from "../src";
+import { EchoAI, createTool, ChatAgent, ToolAgent } from "../src";
 import { PromptTemplate, PromptRegistry, PromptVersionError } from "../src/prompts";
 import { InMemoryStore } from "../src/memory/store";
 import { ConfigurationError, ValidationError } from "../src/core/exceptions";

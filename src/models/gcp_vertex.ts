@@ -1,6 +1,7 @@
 import { VertexAI } from "@google-cloud/vertexai";
 import { BaseProvider } from "./base";
 import { ChatRequest, ChatResponse } from "./schemas";
+import { withRetries } from "../core/resilience";
 
 export interface GcpVertexConfig {
   project: string;
@@ -43,10 +44,29 @@ export class GcpVertexProvider extends BaseProvider {
     }));
 
     try {
-      const response = await generativeModel.generateContent({
-        contents,
-        systemInstruction: systemInstruction ? { role: "system", parts: [{ text: systemInstruction }] } : undefined
-      });
+      const response = await withRetries(
+        async () => {
+          return await generativeModel.generateContent({
+            contents,
+            systemInstruction: systemInstruction ? { role: "system", parts: [{ text: systemInstruction }] } : undefined
+          });
+        },
+        {
+          maxRetries: 3,
+          initialDelayMs: 500,
+          maxDelayMs: 5000,
+          shouldRetry: (error: any) => {
+            // Retry on resource exhaustion and transient errors
+            return error.status === 429 ||
+                   error.status === 503 ||
+                   error.code === 'RESOURCE_EXHAUSTED' ||
+                   error.code === 'UNAVAILABLE' ||
+                   error.message?.includes('quota') ||
+                   error.message?.includes('rate limit');
+          }
+        },
+        "GCP Vertex invocation"
+      );
 
       const responseText = response.response.candidates?.[0]?.content?.parts?.[0]?.text || null;
       
@@ -61,7 +81,22 @@ export class GcpVertexProvider extends BaseProvider {
         model_name: model,
       };
     } catch (e: any) {
-        throw new Error(`GCP Vertex invocation failed: ${e.message}`);
+      // Enhance error message with troubleshooting hints
+      let errorMessage = `GCP Vertex invocation failed: ${e.message}`;
+      
+      if (e.code === 'RESOURCE_EXHAUSTED' || e.message?.includes('quota')) {
+        errorMessage += `\nHint: API quota exceeded. Check your GCP quotas at https://console.cloud.google.com/iam-admin/quotas`;
+      } else if (e.code === 'PERMISSION_DENIED') {
+        errorMessage += `\nHint: Check your IAM permissions for Vertex AI API. Ensure 'Vertex AI User' role is granted.`;
+      } else if (e.code === 'INVALID_ARGUMENT') {
+        errorMessage += `\nHint: Invalid request. Check your model configuration and request parameters.`;
+      } else if (e.code === 'UNAVAILABLE' || e.status === 503) {
+        errorMessage += `\nHint: Vertex AI service temporarily unavailable. Please retry later.`;
+      } else if (e.message?.includes('rate limit')) {
+        errorMessage += `\nHint: Rate limit exceeded. Consider implementing exponential backoff.`;
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 
