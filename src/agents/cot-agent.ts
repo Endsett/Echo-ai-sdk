@@ -3,7 +3,6 @@
  * Implements step-by-step reasoning with explicit thinking process
  */
 
-import { z } from "zod";
 import { ChatRequest, BaseProvider } from "../models";
 import { AIModelGateway } from "../gateway/router";
 import { BaseMemoryStore } from "../memory/store";

@@ -3,7 +3,6 @@
  * Implements tree-based reasoning with multiple thought paths and evaluation
  */
 
-import { z } from "zod";
 import { ChatRequest, BaseProvider } from "../models";
 import { AIModelGateway } from "../gateway/router";
 import { BaseMemoryStore } from "../memory/store";

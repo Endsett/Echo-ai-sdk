@@ -19,7 +19,27 @@ export abstract class BaseProvider {
   /**
    * Enhanced streaming with structured chunks, backpressure, and error handling.
    */
-  abstract chatStreamEnhanced(request: ChatRequest, options?: StreamOptions): AsyncGenerator<StreamChunk, void, unknown>;
+  async* chatStreamEnhanced(request: ChatRequest, options?: StreamOptions): AsyncGenerator<StreamChunk, void, unknown> {
+    // Default implementation wraps chatStream
+    try {
+      for await (const chunk of this.chatStream(request)) {
+        yield {
+          type: "content",
+          content: chunk,
+          metadata: {}
+        };
+      }
+    } catch (error: any) {
+      yield {
+        type: "error",
+        error: {
+          message: error.message,
+          code: error.code,
+          retryable: false
+        }
+      };
+    }
+  }
 
   /**
    * Check if the provider supports enhanced streaming

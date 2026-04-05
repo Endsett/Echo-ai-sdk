@@ -25,6 +25,7 @@ export interface StreamChunk {
     model?: string;
     provider?: string;
     finish_reason?: string;
+    [key: string]: any;
   };
 }
 

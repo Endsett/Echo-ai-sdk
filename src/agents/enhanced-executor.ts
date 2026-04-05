@@ -3,10 +3,10 @@
  * and improved streaming capabilities
  */
 
-import { z } from "zod";
+import { AgentExecutor } from "./executor";
 import { ChatRequest, BaseProvider } from "../models";
-import { AIModelGateway } from "../gateway/router";
 import { BaseMemoryStore } from "../memory/store";
+import { AIModelGateway } from "../gateway/router";
 import { ToolContext } from "../tools/base";
 import { AgentTelemetry } from "../core/telemetry";
 import { logger } from "../core/logger";
@@ -208,10 +208,11 @@ export class EnhancedAgentExecutor {
           tools: this.tools.size > 0 ? Array.from(this.tools.values()).map(t => t.getMcpSchema()) : undefined,
           model_family: "smart",
           temperature: this.getTemperatureForPattern(reasoningPattern),
+          stream: true
         };
 
         let fullContent = "";
-        let toolCalls: any[] = [];
+        const toolCalls: any[] = [];
         
         for await (const chunk of this.gateway.chatStreamEnhanced(request)) {
           switch (chunk.type) {
@@ -354,7 +355,7 @@ export class EnhancedAgentExecutor {
         
         const dependency = this.toolDependencies.get(toolName);
         const canExecute = !dependency || 
-          dependency.dependsOn.every(dep => processed.has(dep));
+          dependency.dependsOn.every((dep: string) => processed.has(dep));
         
         if (canExecute) {
           currentGroup.push(toolCall);
@@ -500,7 +501,7 @@ export class EnhancedAgentExecutor {
 
       // Execute tools in parallel within the group
       const toolPromises = group.map(async (toolCall) => {
-        const toolName = toolCall.function.name;
+        const _toolName = toolCall.function.name;
         const toolId = toolCall.id;
         
         const result = await this.executeSingleTool(sessionId, toolCall);

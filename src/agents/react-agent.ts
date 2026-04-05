@@ -3,7 +3,6 @@
  * Implements the ReAct pattern with self-reflection capabilities for improved reasoning
  */
 
-import { z } from "zod";
 import { ChatRequest, BaseProvider } from "../models";
 import { AIModelGateway } from "../gateway/router";
 import { BaseMemoryStore } from "../memory/store";

@@ -3,7 +3,7 @@
  * Intelligently selects the best agent for tasks based on multiple factors
  */
 
-import { AgentProfile, AgentCapability } from "./agent-team";
+import { AgentProfile } from "./agent-team";
 import { logger } from "../../core/logger";
 
 export interface SelectionCriteria {
@@ -62,7 +62,7 @@ export class DynamicAgentSelector {
     strategyName?: string
   ): AgentScore | null {
     // Filter available agents
-    let candidates = this.filterCandidates(agents, criteria);
+    const candidates = this.filterCandidates(agents, criteria);
     
     if (candidates.length === 0) {
       logger.warn("No agents available for selection");

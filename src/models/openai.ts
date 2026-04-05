@@ -85,7 +85,7 @@ export class OpenAIProvider extends BaseProvider {
         stream: true,
       });
 
-      let toolCallBuffer: Record<string, { id: string; name: string; arguments: string }> = {};
+      const toolCallBuffer: Record<string, { id: string; name: string; arguments: string }> = {};
       
       for await (const chunk of stream) {
         const choice = chunk.choices[0];

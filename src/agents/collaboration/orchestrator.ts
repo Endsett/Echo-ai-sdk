@@ -8,7 +8,7 @@ import { BaseMemoryStore } from "../../memory/store";
 import { AgentTelemetry } from "../../core/telemetry";
 import { logger } from "../../core/logger";
 import { ValidationError } from "../../core/exceptions";
-import { AgentTeam, AgentProfile, AgentMessage } from "./agent-team";
+import { AgentTeam, AgentMessage } from "./agent-team";
 
 export interface WorkflowStep {
   id: string;
@@ -328,7 +328,7 @@ export class AgentOrchestrator extends EventEmitter {
     step: WorkflowStep,
     teamName?: string,
     input?: any,
-    agentId?: string
+    _agentId?: string
   ): Promise<any> {
     const team = teamName ? this.teams.get(teamName) : this.getDefaultTeam();
     if (!team) {
@@ -394,7 +394,7 @@ export class AgentOrchestrator extends EventEmitter {
    * Handle task handoffs
    */
   private async handleHandoff(message: AgentMessage): Promise<void> {
-    const { taskId, taskData, reason } = message.content;
+    const { taskId, reason } = message.content;
     
     // Find the team and update task assignment
     for (const team of this.teams.values()) {
@@ -424,7 +424,7 @@ export class AgentOrchestrator extends EventEmitter {
    * Handle task completion
    */
   private async handleTaskCompletion(event: any): Promise<void> {
-    const { taskId, result } = event;
+    const { result } = event;
     
     // Find and update the execution
     for (const execution of this.executions.values()) {
