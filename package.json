@@ -12,6 +12,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --external @azure/arm-machinelearning,@azure/identity,@google-cloud/aiplatform,@google-cloud/vertexai,@aws-sdk/client-sagemaker,@aws-sdk/client-bedrock-runtime,@azure/openai",
     "dev": "tsup src/index.ts --format cjs,esm --watch --dts",
