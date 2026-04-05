@@ -1,0 +1,210 @@
+name: Monitoring & Alerting
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["CI", "Release"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check package health
+        run: |
+          echo "## Package Health Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if package can be installed
+          npm pack --dry-run
+          echo "✅ Package can be packed" >> $GITHUB_STEP_SUMMARY
+          
+          # Check bundle size
+          npm run build
+          CJS_SIZE=$(wc -c < dist/index.js)
+          ESM_SIZE=$(wc -c < dist/index.mjs)
+          echo "✅ Bundle sizes: CJS: $CJS_SIZE bytes, ESM: $ESM_SIZE bytes" >> $GITHUB_STEP_SUMMARY
+          
+          # Check dependencies
+          AUDIT_OUTPUT=$(npm audit --json)
+          VULNS=$(echo $AUDIT_OUTPUT | jq -r '.metadata.vulnerabilities.total // 0')
+          if [ $VULNS -eq 0 ]; then
+            echo "✅ No vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ $VULNS vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  performance-monitoring:
+    name: Performance Monitoring
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Performance benchmarks
+        run: |
+          npm run build
+          
+          # Create performance test
+          mkdir -p perf-test
+          cat > perf-test/benchmark.js << 'EOF'
+          const { performance } = require('perf_hooks');
+          const SDK = require('../dist/index.js');
+          
+          async function benchmark() {
+            const results = {};
+            
+            // Test 1: SDK Initialization
+            const initStart = performance.now();
+            for (let i = 0; i < 100; i++) {
+              const gateway = new SDK.AIModelGateway([]);
+            }
+            const initEnd = performance.now();
+            results.initialization = ((initEnd - initStart) / 100).toFixed(2);
+            
+            // Test 2: Agent Creation
+            const agentStart = performance.now();
+            for (let i = 0; i < 100; i++) {
+              const agent = SDK.createToolAgent([]);
+            }
+            const agentEnd = performance.now();
+            results.agentCreation = ((agentEnd - agentStart) / 100).toFixed(2);
+            
+            console.log(JSON.stringify(results, null, 2));
+            
+            // Performance thresholds
+            if (results.initialization > 10) {
+              console.error('Initialization too slow!');
+              process.exit(1);
+            }
+          }
+          
+          benchmark();
+          EOF
+          
+          node perf-test/benchmark.js
+
+  alert-on-failure:
+    name: Alert on CI Failures
+    runs-on: ubuntu-latest
+    if: failure() && github.event_name == 'workflow_run'
+    needs: [health-check, performance-monitoring]
+    steps:
+      - name: Get workflow run details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: run } = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id,
+            });
+            
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id,
+            });
+            
+            const failedJobs = jobs.jobs.filter(job => job.conclusion === 'failure');
+            
+            if (failedJobs.length > 0) {
+              const issueBody = `
+              ## 🚨 CI/CD Failure Alert
+              
+              **Workflow**: ${run.name}
+              **Branch**: ${run.head_branch}
+              **Commit**: ${run.head_sha}
+              **Triggered by**: ${run.event}
+              
+              ### Failed Jobs:
+              ${failedJobs.map(job => `- [${job.name}](${job.html_url})`).join('\n')}
+              
+              ### Next Steps:
+              - [ ] Review failed jobs
+              - [ ] Fix identified issues
+              - [ ] Re-run workflow if needed
+              
+              ---
+              This issue was created automatically by the monitoring workflow.
+              `;
+              
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🚨 CI/CD Failure: ${run.name}`,
+                body: issueBody,
+                labels: ['ci-failure', 'automated-alert'],
+              });
+            }
+
+  metrics-collector:
+    name: Collect Metrics
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Collect repository metrics
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: repo } = await github.rest.repos.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 1,
+            });
+            
+            const metrics = {
+              stars: repo.stargazers_count,
+              forks: repo.forks_count,
+              watchers: repo.watchers_count,
+              open_issues: repo.open_issues_count,
+              latest_release: releases[0]?.tag_name || 'None',
+              last_updated: repo.updated_at,
+            };
+            
+            console.log('Repository Metrics:', JSON.stringify(metrics, null, 2));
+            
+            // Store metrics as artifact
+            const fs = require('fs');
+            fs.writeFileSync('metrics.json', JSON.stringify(metrics, null, 2));
+
+      - name: Upload metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-metrics
+          path: metrics.json
+          retention-days: 90
