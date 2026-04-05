@@ -190,6 +190,154 @@ console.log(`Value Generated: $${stats.totalValueGeneratedUsd}`);
 
 ---
 
+### 🚀 Tier 3 Advanced Agent Capabilities
+
+#### 🤖 Advanced Reasoning Agents
+Go beyond simple tool execution with sophisticated reasoning patterns:
+
+```typescript
+import { ReActAgent, CoTAgent, ToTAgent } from "echo-ai-sdk";
+
+// ReAct with Reflection - Thinks before acting
+const reactAgent = new ReActAgent({
+  gateway,
+  memory,
+  tools: [searchTool, calculatorTool],
+  reactOptions: {
+    enableReflection: true,
+    confidenceThreshold: 0.8
+  }
+});
+
+// Chain of Thought - Step-by-step reasoning
+const cotAgent = new CoTAgent({
+  gateway,
+  memory,
+  tools: [analysisTool],
+  cotOptions: {
+    maxSteps: 10,
+    requireConclusions: true
+  }
+});
+
+// Tree of Thoughts - Explores multiple solution paths
+const totAgent = new ToTAgent({
+  gateway,
+  memory,
+  tools: [creativeTool],
+  totOptions: {
+    maxDepth: 4,
+    breadth: 3,
+    evaluationMethod: "score"
+  }
+});
+
+// Stream reasoning process
+for await (const event of reactAgent.executeStream(sessionId, task)) {
+  console.log(`${event.type}: ${event.content}`);
+}
+```
+
+#### ⚡ Enhanced Parallel Execution
+Execute tools simultaneously with dependency resolution:
+
+```typescript
+import { EnhancedAgentExecutor, ToolDependency } from "echo-ai-sdk";
+
+const executor = new EnhancedAgentExecutor({
+  gateway,
+  memory,
+  tools: [searchTool, weatherTool, calculatorTool],
+  toolDependencies: [
+    { toolName: "weather", dependsOn: ["search"] } // Weather needs search results first
+  ],
+  executionOptions: {
+    enableParallel: true,
+    maxParallelTools: 5,
+    toolTimeout: 10000,
+    streamToolResults: true
+  }
+});
+
+// Tools execute in parallel when possible
+const result = await executor.execute(sessionId, complexTask);
+```
+
+#### 🔄 Multi-Agent Collaboration
+Coordinate multiple agents for complex workflows:
+
+```typescript
+import { AgentTeam, AgentOrchestrator, DynamicAgentSelector } from "echo-ai-sdk";
+
+// Create an agent team
+const team = new AgentTeam({
+  name: "ResearchTeam",
+  loadBalancingStrategy: "capability_based",
+  communicationProtocol: "direct"
+}, memory);
+
+// Register specialized agents
+team.registerAgent({
+  id: "researcher",
+  name: "Research Specialist",
+  capabilities: [{ 
+    name: "research",
+    tools: ["search"],
+    reasoningPatterns: ["react"],
+    specialties: ["academic_research"]
+  }],
+  status: "active",
+  currentLoad: 0,
+  maxConcurrentTasks: 3
+});
+
+// Delegate tasks to best agent
+const taskId = await team.delegateTask("coordinator", {
+  query: "Latest AI research papers",
+  analysis: "summarize"
+}, {
+  capabilities: ["research"],
+  maxResponseTime: 5000
+});
+
+// Orchestrate complex workflows
+const orchestrator = new AgentOrchestrator({}, memory);
+const workflow = {
+  id: "research_pipeline",
+  steps: [
+    { id: "collect", requiredCapabilities: ["research"] },
+    { id: "analyze", requiredCapabilities: ["analysis"] },
+    { id: "summarize", requiredCapabilities: ["summarization"] }
+  ],
+  orchestrationPattern: "sequential"
+};
+
+const executionId = await orchestrator.executeWorkflow(
+  workflow.id,
+  { topic: "quantum computing" }
+);
+```
+
+#### 🎯 Dynamic Agent Selection
+Automatically select the best agent based on capabilities, performance, and cost:
+
+```typescript
+const selector = new DynamicAgentSelector();
+
+// Select best agent for task
+const selection = selector.selectAgent(agents, {
+  requiredCapabilities: ["analysis", "computation"],
+  maxResponseTime: 3000,
+  costLimit: 0.10,
+  priority: "high"
+}, "performance_first");
+
+console.log(`Selected: ${selection.agentId} (score: ${selection.score})`);
+console.log(`Reasoning: ${selection.reasoning}`);
+```
+
+---
+
 ## Installation
 
 ```sh

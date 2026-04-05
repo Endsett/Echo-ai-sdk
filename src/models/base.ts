@@ -1,4 +1,5 @@
 import { ChatRequest, ChatResponse } from "./schemas";
+import { StreamChunk, StreamOptions, EnhancedAsyncStream } from "../core/streaming";
 
 export abstract class BaseProvider {
   /** The unique identifier of the provider (e.g., 'openai', 'anthropic'). */
@@ -14,4 +15,32 @@ export abstract class BaseProvider {
    * Same as chatComplete but yields text chunks asynchronously.
    */
   abstract chatStream(request: ChatRequest): AsyncGenerator<string, void, unknown>;
+
+  /**
+   * Enhanced streaming with structured chunks, backpressure, and error handling.
+   */
+  abstract chatStreamEnhanced(request: ChatRequest, options?: StreamOptions): AsyncGenerator<StreamChunk, void, unknown>;
+
+  /**
+   * Check if the provider supports enhanced streaming
+   */
+  get supportsEnhancedStreaming(): boolean {
+    return false;
+  }
+
+  /**
+   * Default implementation that wraps text stream into enhanced chunks
+   */
+  protected async *wrapTextStream(stream: AsyncGenerator<string>, provider: string, model?: string): AsyncGenerator<StreamChunk, void, unknown> {
+    for await (const content of stream) {
+      yield {
+        type: "content",
+        content,
+        metadata: {
+          provider,
+          model,
+        }
+      };
+    }
+  }
 }

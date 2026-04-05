@@ -17,6 +17,12 @@ Whether you are just starting out or architecting a planet-scale AI infrastructu
 - **[Multimodal (TTS & Images)](./features/multimodal.md)**: Interacting with audio generation (`HuggingFaceTTS`) and image synthesis workflows natively within chats.
 - **[Cloud Native Deployments](./features/cloud-deployments.md)**: Spinning up dedicated instances on Hugging Face Serverless Endpoints, SageMaker, Vertex AI, or Azure ML directly via the SDK.
 
+### Advanced Features (v2.8.0+)
+- **[What's New in v2.8.0](./whats-new-v2.8.0.md)**: Complete guide to advanced agent reasoning and multi-agent collaboration
+- **[Advanced Agents Guide](./features/advanced-agents.md)**: Deep dive into ReAct, Chain of Thought, and Tree of Thoughts agents
+- **[Multi-Agent Collaboration](./features/multi-agent-collaboration.md)**: Building teams, orchestration, and workflow management
+- **[Performance Optimization](./features/performance-optimization.md)**: Parallel execution and dynamic agent selection
+
 ---
 
 *For codebase contributions or licensing details, please refer to the primary repository `README.md` and `LICENSE` in the parent directory.*

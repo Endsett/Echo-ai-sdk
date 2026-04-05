@@ -1,7 +1,7 @@
 {
   "name": "echo-ai-sdk-ts",
   "version": "2.8.0",
-  "description": "Echo AI SDK: Tier 5 Cloud Native (AWS Bedrock/SageMaker, GCP Vertex, Azure OpenAI/ML)",
+  "description": "Echo AI SDK: Advanced multi-agent collaboration with ReAct, CoT, Tree of Thoughts, parallel execution, and workflow orchestration - Tier 5 Cloud Native (AWS Bedrock/SageMaker, GCP Vertex, Azure OpenAI/ML)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Endsett/Echo-ai-sdk.git"
