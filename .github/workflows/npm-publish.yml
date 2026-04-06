@@ -1,14 +1,8 @@
-name: Release (DEPRECATED - use release.yml)
+name: Publish npm Packages
 
-# DEPRECATED: This workflow is replaced by release.yml
-# Keeping the file but disabling all triggers
 on:
-  workflow_dispatch:
-    inputs:
-      confirm:
-        description: 'This workflow is deprecated. Use release.yml instead.'
-        required: true
-        default: 'false'
+  release:
+    types: [published]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -18,27 +12,14 @@ permissions:
   id-token: write
 
 jobs:
-  test:
-    name: Pre-release Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 20
-          cache: npm
-
-      - run: npm ci
-      - run: npm test -- --reporter=verbose
-
   publish-npm:
     name: Publish to npm
-    needs: test
     runs-on: ubuntu-latest
     environment: npm-publish
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - uses: actions/setup-node@v6
         with:
@@ -61,13 +42,14 @@ jobs:
 
   publish-gpr:
     name: Publish to GitHub Packages
-    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - uses: actions/setup-node@v6
         with:
@@ -81,7 +63,7 @@ jobs:
         run: npm run build
 
       - name: Scope package for GPR
-        run: npm pkg set name="@Endsett/echo-ai-sdk-ts"
+        run: npm pkg set name="@endsett/echo-ai-sdk-ts"
 
       - name: Publish to GitHub Packages
         run: npm publish
