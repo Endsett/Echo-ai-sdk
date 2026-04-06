@@ -2,6 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import { BaseProvider } from "./base";
 import { ChatRequest, ChatResponse } from "./schemas";
 
+/**
+ * Anthropic provider model tiers
+ * - fast: claude-haiku-4-20250514 (fastest, most cost-effective)
+ * - smart: claude-sonnet-4-20250514 (high quality, good balance)
+ * - capable: claude-opus-4-20250514 (highest quality)
+ * - reasoning: claude-opus-4-20250514 (best reasoning capabilities)
+ */
 export class AnthropicProvider extends BaseProvider {
   private client: Anthropic;
 
@@ -14,7 +21,31 @@ export class AnthropicProvider extends BaseProvider {
     return "anthropic";
   }
 
+  /**
+   * Get the appropriate model based on model family tier
+   */
+  private getModel(modelFamily: string): string {
+    // If explicit model is specified, use it directly
+    if (modelFamily.startsWith("claude-")) {
+      return modelFamily;
+    }
+
+    switch (modelFamily) {
+      case "fast":
+        return "claude-haiku-4-20250514";
+      case "smart":
+        return "claude-sonnet-4-20250514";
+      case "capable":
+      case "reasoning":
+        return "claude-opus-4-20250514";
+      default:
+        return "claude-sonnet-4-20250514";
+    }
+  }
+
   async chatComplete(request: ChatRequest): Promise<ChatResponse> {
+    const model = this.getModel(request.model_family || "smart");
+    
     // Anthropic separates system prompts from the messages array
     const systemMessage = request.messages.find(m => m.role === "system")?.content || undefined;
     const userMessages = request.messages.filter(m => m.role !== "system").map(m => ({
@@ -23,8 +54,8 @@ export class AnthropicProvider extends BaseProvider {
     }));
 
     const response = await this.client.messages.create({
-      model: request.model_family === "smart" ? "claude-3-opus-20240229" : "claude-3-haiku-20240307",
-      max_tokens: request.max_tokens || 1024,
+      model,
+      max_tokens: request.max_tokens || 4096,
       temperature: request.temperature,
       system: systemMessage,
       messages: userMessages as any,
@@ -51,6 +82,8 @@ export class AnthropicProvider extends BaseProvider {
   }
 
   async *chatStream(request: ChatRequest): AsyncGenerator<string, void, unknown> {
+    const model = this.getModel(request.model_family || "smart");
+    
     const systemMessage = request.messages.find(m => m.role === "system")?.content || undefined;
     const userMessages = request.messages.filter(m => m.role !== "system").map(m => ({
       role: m.role as "user" | "assistant",
@@ -58,8 +91,8 @@ export class AnthropicProvider extends BaseProvider {
     }));
 
     const stream = await this.client.messages.create({
-      model: request.model_family === "smart" ? "claude-3-opus-20240229" : "claude-3-haiku-20240307",
-      max_tokens: request.max_tokens || 1024,
+      model,
+      max_tokens: request.max_tokens || 4096,
       temperature: request.temperature,
       system: systemMessage,
       messages: userMessages as any,

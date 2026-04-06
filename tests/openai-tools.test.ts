@@ -7,7 +7,7 @@ vi.mock("openai", () => {
       chat = {
         completions: {
           create: async () => ({
-            model: "gpt-4-turbo",
+            model: "gpt-4.1",
             choices: [
               {
                 message: {
