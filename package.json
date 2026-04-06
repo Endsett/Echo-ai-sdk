@@ -1,7 +1,7 @@
 {
   "name": "@endsett/echo-ai-sdk",
-  "version": "2.8.1",
-  "description": "Echo AI SDK: Advanced multi-agent collaboration with ReAct, CoT, Tree of Thoughts, parallel execution, and workflow orchestration - Tier 5 Cloud Native (AWS Bedrock/SageMaker, GCP Vertex, Azure OpenAI/ML)",
+  "version": "3.0.0",
+  "description": "Echo AI SDK v3.0: Modern AI orchestration with GPT-4.1, Claude 4, Gemini 2.5, MCP protocol, OpenTelemetry tracing, eval framework, and enhanced developer experience",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Endsett/Echo-ai-sdk.git"
@@ -16,7 +16,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --external @azure/arm-machinelearning,@azure/identity,@google-cloud/aiplatform,@google-cloud/vertexai,@aws-sdk/client-sagemaker,@aws-sdk/client-bedrock-runtime,@azure/openai",
+    "build": "tsup src/index.ts --format cjs,esm --external @azure/arm-machinelearning,@azure/identity,@google-cloud/aiplatform,@google-cloud/vertexai,@google/genai,@aws-sdk/client-sagemaker,@aws-sdk/client-bedrock-runtime,@azure/openai",
     "dev": "tsup src/index.ts --format cjs,esm --watch --dts",
     "lint:js": "eslint src/**/*.ts tests/**/*.ts",
     "lint:types": "tsc --noEmit",
@@ -27,6 +27,7 @@
     "format": "prettier --write . || echo 'Prettier not configured, skipping format'"
   },
   "dependencies": {
+    "@google/genai": "^0.1.0",
     "@honcho-ai/sdk": "^2.1.0",
     "@huggingface/inference": "^4.13.15",
     "cors": "^2.8.5",

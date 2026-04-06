@@ -1,2 +1,3 @@
 export * from "./base";
-export * from "./builtin";
+export * from "./registry";
+export { calculatorTool, dateTimeTool, webSearchTool } from "./builtin";

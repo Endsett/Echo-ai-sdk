@@ -2,6 +2,8 @@ import { settings } from "./core/config";
 import { AIModelGateway } from "./gateway/router";
 import { OpenAIProvider } from "./models/openai";
 import { AnthropicProvider } from "./models/anthropic";
+import { GeminiProvider } from "./models/gemini";
+import { DeepSeekProvider } from "./models/deepseek";
 import { BaseProvider } from "./models/base";
 import { ChatAgent, ToolAgent } from "./agents/prebuilt";
 import { ToolContext } from "./tools/base";
@@ -22,7 +24,9 @@ import { ConfigurationError } from "./core/exceptions";
  * const ai = new EchoAI({
  *   providers: [
  *     new OpenAIProvider(process.env.OPENAI_API_KEY),
- *     new AnthropicProvider(process.env.ANTHROPIC_API_KEY)
+ *     new AnthropicProvider(process.env.ANTHROPIC_API_KEY),
+ *     new GeminiProvider(process.env.GEMINI_API_KEY),
+ *     new DeepSeekProvider(process.env.DEEPSEEK_API_KEY)
  *   ]
  * });
  * ```
@@ -53,11 +57,22 @@ export class EchoAI {
       if (settings.hasAnthropic) {
         providers.push(new AnthropicProvider(settings.anthropicApiKey));
       }
+      if (settings.hasGemini) {
+        providers.push(new GeminiProvider(settings.geminiApiKey));
+      }
+      if (settings.hasDeepSeek) {
+        providers.push(new DeepSeekProvider(settings.deepseekApiKey));
+      }
     }
 
     if (providers.length === 0) {
       throw new ConfigurationError(
-        "No AI providers configured. Set OPENAI_API_KEY or ANTHROPIC_API_KEY environment variables, or pass providers manually via `new EchoAI({ providers: [...] })`."
+        "No AI providers configured. Set one of the following environment variables:\n" +
+        "  - OPENAI_API_KEY\n" +
+        "  - ANTHROPIC_API_KEY\n" +
+        "  - GEMINI_API_KEY\n" +
+        "  - DEEPSEEK_API_KEY\n" +
+        "Or pass providers manually via `new EchoAI({ providers: [...] })`."
       );
     }
 

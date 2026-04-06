@@ -11,7 +11,7 @@ export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 export const ChatRequestSchema = z.object({
   messages: z.array(ChatMessageSchema),
   tools: z.array(z.record(z.any())).optional(),
-  model_family: z.enum(["fast", "smart", "capable"]).default("fast"),
+  model_family: z.enum(["fast", "smart", "capable", "reasoning"]).default("fast"),
   temperature: z.number().min(0).max(2).default(0.7),
   max_tokens: z.number().optional(),
   stream: z.boolean().default(false),

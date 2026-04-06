@@ -4,6 +4,13 @@ import { ChatRequest, ChatResponse } from "./schemas";
 import { StreamChunk, StreamOptions, EnhancedAsyncStream } from "../core/streaming";
 import { globalConnectionPool } from "../core/connection-pool";
 
+/**
+ * OpenAI provider model tiers
+ * - fast: gpt-4.1-mini (cost-effective, fast responses)
+ * - smart: gpt-4.1 (high quality)
+ * - capable: gpt-4.1 (highest quality, same as smart for OpenAI)
+ * - reasoning: o4-mini (reasoning capabilities)
+ */
 export class OpenAIProvider extends BaseProvider {
   private client: OpenAI;
 
@@ -20,9 +27,33 @@ export class OpenAIProvider extends BaseProvider {
     return "openai";
   }
 
+  /**
+   * Get the appropriate model based on model family tier
+   */
+  private getModel(modelFamily: string): string {
+    // If explicit model is specified, use it directly
+    if (modelFamily.startsWith("gpt-") || modelFamily.startsWith("o")) {
+      return modelFamily;
+    }
+
+    switch (modelFamily) {
+      case "fast":
+        return "gpt-4.1-mini";
+      case "smart":
+      case "capable":
+        return "gpt-4.1";
+      case "reasoning":
+        return "o4-mini";
+      default:
+        return "gpt-4.1-mini";
+    }
+  }
+
   async chatComplete(request: ChatRequest): Promise<ChatResponse> {
+    const model = this.getModel(request.model_family || "fast");
+    
     const response = await this.client.chat.completions.create({
-      model: request.model_family === "smart" ? "gpt-4-turbo" : "gpt-3.5-turbo",
+      model,
       messages: request.messages as any,
       temperature: request.temperature,
       tools: request.tools as any,
@@ -51,8 +82,10 @@ export class OpenAIProvider extends BaseProvider {
   }
 
   async *chatStream(request: ChatRequest): AsyncGenerator<string, void, unknown> {
+    const model = this.getModel(request.model_family || "fast");
+    
     const stream = await this.client.chat.completions.create({
-      model: request.model_family === "smart" ? "gpt-4-turbo" : "gpt-3.5-turbo",
+      model,
       messages: request.messages as any,
       temperature: request.temperature,
       tools: request.tools as any,
@@ -73,7 +106,7 @@ export class OpenAIProvider extends BaseProvider {
   }
 
   async *chatStreamEnhanced(request: ChatRequest, options: StreamOptions = {}): AsyncGenerator<StreamChunk, void, unknown> {
-    const model = request.model_family === "smart" ? "gpt-4-turbo" : "gpt-3.5-turbo";
+    const model = this.getModel(request.model_family || "fast");
     
     const streamGenerator = async function* (this: OpenAIProvider) {
       const stream = await this.client.chat.completions.create({
