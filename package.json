@@ -27,7 +27,7 @@
     "format": "prettier --write . || echo 'Prettier not configured, skipping format'"
   },
   "dependencies": {
-    "@google/genai": "^0.1.0",
+    "@google/genai": "^1.48.0",
     "@honcho-ai/sdk": "^2.1.0",
     "@huggingface/inference": "^4.13.15",
     "cors": "^2.8.5",
